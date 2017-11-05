@@ -1,0 +1,1 @@
+# mzphp2-deobfuscator
