@@ -54,21 +54,21 @@ def parse_code(file_name):
         var_list = repl.group(4).split(repl.group(3))
         return ''
 
-    # 混淆前的字符串数组通常保存在GLOBALS，_SERVER或_GET中
+    # 混淆前的字符串数组通常保存在GLOBALS，_SERVER或_GET这几个超全局变量中
     # 后面紧跟着一个explode函数调用
     file_content = re.sub(r"\$((?:GLOBALS)|(?:_SERVER)|(?:_GET))\[((?:\\x[a-f0-9]{2})+?)\] = explode\(\s*" + re_singlequate + r"(.+?)" + re_singlequate + r"\s*,\s*"+ re_singlequate + r"((?:[^'\\]|(?:\\')|(?:\\?))*)" + re_singlequate + r"\s*\);", get_var_list, file_content)
     
-    # 去除mzphp2添加的 define(..., "..."); 语句
+    # 去除mzphp2添加的 define(..., '...'); 语句
     file_content = re.sub(r"define\(\s*" + re_singlequate + var_key + re_singlequate + r"\s*,\s*" + re_singlequate + r"(?:\\x[a-f0-9]{2})+" + re_singlequate + r"\s*\);", "", file_content)
 
-    # 把所有类似 {$GLOBALS{var_key}[hex_id]} 形式的语句替换为原来的变量名
+    # 把所有类似 {$GLOBALS{var_key}[hex_id]} 形式的语句替换为原来的变量名或函数名
     file_content = re.sub(
         r"{\$" + var_name + r"{" + var_key + r"}[\[\{]((?:0)|(?:0x[a-f0-9]+?))[\]\}]}",
         lambda x: var_list[int(x.group(1), 16)],
         file_content
     )
 
-    # 把所有类似 $GLOBALS{var_key}[hex_id]( var... 形式的语句替换为原来的函数调用格式
+    # 把所有类似 $GLOBALS{var_key}[hex_id]( var... 形式的语句替换为原来的函数名+(
     file_content = re.sub(
         r"\$" + var_name + r"{" + var_key + r"}[\[\{]((?:0)|(?:0x[a-f0-9]+?))[\]\}]\(",
         lambda x: var_list[int(x.group(1), 16)] + "(",
@@ -121,8 +121,8 @@ def parse_code(file_name):
     mnc = 0
     var_list_instance = {}
 
-    # 所有的局部变量名都被混淆成了不可读的字符
-    # 下面就把这些变量名用 $var_1，$var_2之类的名字来替换
+    # 所有函数内部的局部变量名都被混淆成了不可读的字符
+    # 下面就把这些变量名用 $var_1，$var_2...之类的名字来替换
 
     def fix_var(repl):
         global var_list_instance
